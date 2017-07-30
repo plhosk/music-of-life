@@ -1,4 +1,6 @@
 // CONSTANTS
+// const ROWS = 50 // height of board
+// const COLS = 120 // width 
 const ROWS = 50 // height of board
 const COLS = 120 // width 
 const STEP_INTERVAL = 50 // milliseconds
@@ -18,9 +20,9 @@ const { connect } = ReactRedux
 const advanceBoardHelper = (current) => {
   let next = []
   let row, col  
-  for (row = 0 row < ROWS row++) {
+  for (row = 0; row < ROWS; row++) {
     next.push([])
-    for (col = 0 col < COLS col++) {
+    for (col = 0; col < COLS; col++) {
       const neighbours = (() => {
         const rowUp = row === 0 ? ROWS - 1 : row - 1
         const rowDown = row === ROWS - 1 ? 0 : row + 1
@@ -67,9 +69,9 @@ const advanceBoardHelper = (current) => {
 const initializeBoardHelper = (randomize = true) => {
   let i, j
   let board = []
-  for (i = 0 i < ROWS i++) {
+  for (i = 0; i < ROWS; i++) {
     board.push([])
-    for (j = 0 j < COLS j++) {
+    for (j = 0; j < COLS; j++) {
       board[i].push(randomize ? (Math.random() < RANDOM_DENSITY ? 1 : 0) : 0)
     }
   }
@@ -79,7 +81,7 @@ const initializeBoardHelper = (randomize = true) => {
 // Activate or deactivate a specific cell
 const changeCellHelper = (state, cellRow, cellCol, newAge) => {
   let boardCopy = []
-  for (let i = 0 i < ROWS i++) {
+  for (let i = 0; i < ROWS; i++) {
     boardCopy.push(state[i].slice())
   }
   boardCopy[cellRow][cellCol] = newAge
@@ -134,6 +136,165 @@ class AutoStep extends Component {
   }
 }
 
+// const context = new AudioContext()
+// const o = context.createOscillator()
+// o.type = 'sawtooth'
+// const gain = context.createGain()
+// const masterGain = context.createGain()
+// o.connect(gain)
+// gain.connect(masterGain)
+// masterGain.gain.value = 0
+// masterGain.connect(context.destination)
+
+// const lfo = context.createOscillator()
+// lfo.frequency.value = 6
+// const lfoGain = context.createGain()
+// lfoGain.gain.value = 2
+// lfo.connect(lfoGain)
+// lfoGain.connect(o.frequency)
+
+// lfo.start()
+// o.start()
+
+
+// const soundStart = () => {
+//   masterGain.gain.linearRampToValueAtTime(
+//     0.2,
+//     context.currentTime + 0.1
+//   )
+// }
+
+// const soundNote = (frequency, rampTime) => {
+//   // o.frequency.value = frequency
+//   o.frequency.setValueAtTime(frequency, context.currentTime)
+//   // masterGain.gain.linearRampToValueAtTime(
+//   //   0.2,
+//   //   context.currentTime + rampTime
+//   // )
+//   // masterGain.gain.setValueAtTime(0.2, 0)
+//   masterGain.gain.value = 0.2
+//   masterGain.gain.linearRampToValueAtTime(
+//     0.00001,
+//     context.currentTime + rampTime
+//   )
+// }
+
+// const soundStop = () => {
+//   masterGain.gain.exponentialRampToValueAtTime(
+//     0.00001,
+//     context.currentTime + 0.1
+//   )
+// }
+
+const scales = {
+  major: [0, 2, 4, 5, 7, 9, 11],
+  pentatonic: [0, 2, 4, 7, 9],
+  wholetone: [0, 2, 4, 6, 8, 10],
+  chromatic: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+}
+
+const scaleName = 'pentatonic'
+const initialNote = 48 // C3
+
+// TODO: use d3-scale?
+
+const currentScale = []
+for (let i = initialNote; i + 12 < frequencies.length; i+= 12) {
+  for (let semitone = 0; semitone < 12; semitone += 1 ) {
+    if (scales[scaleName].includes(semitone)) {
+      currentScale.push(frequencies[i + semitone])
+    }
+  }
+}
+
+/* Update the Web Audio API */
+const UpdateSounds = ({ board, generation }) => {
+
+  /* populate boardInfo with analyzed output */
+  // const data = {
+  //   height: ROWS,
+  //   width: COLS,
+  //   zero: {
+  //   },
+  // }
+  /**
+   * 0 dimensional measures - countTotal,
+   */
+
+  if (generation % 4 !== 0) return null
+
+  let activeTotal = 0
+  let y, x // y = vertical position, x = horizontal position
+  // Iterate across rows, each row scanning left to right.
+  // Each value is 0 for dead, or 1-7 for age (7 is oldest)
+  for (y = 0; y < ROWS; y++) {
+    for (x = 0; x < COLS; x++) {
+      // Count of active cells (age 1-7)
+      if (board[y][x] > 0 && board[y][x] !== 7) {
+        activeTotal += 1
+      }
+    }
+  }
+
+  /**
+   * Mappings from data to audio changes
+   */
+  // TODO: use d3-scale?
+  // let factor1 = activeTotal / (ROWS * COLS + 1) + (1 - activeTotal / (ROWS * COLS + 1)) / 2
+  let factor1 = activeTotal / (ROWS * COLS + 1)
+  factor1 = Math.sqrt(factor1)
+  let frequency1 = currentScale[
+    Math.floor(factor1 * currentScale.length)
+  ]
+
+  // console.log(frequency1)
+  // Modify audio voices
+  voice1.newFrequency(frequency1)
+  // voice2.newFrequency(frequency1 * 1.25992)
+  // voice2.newFrequency(frequency1 * 1.49831)
+  // voice2.newFrequency(frequency1 * 2)
+
+  // Don't actually render anything to the DOM
+  return null
+}
+const mapStateToUpdateSoundsProps = ({ board, generation }) => ({ board, generation })
+const UpdateSoundsContainer = connect(mapStateToUpdateSoundsProps)(UpdateSounds)
+
+
+const Voice = class {
+  constructor(type, initialGain) {
+    this.context = new AudioContext()
+    this.o = this.context.createOscillator()
+    this.gain = this.context.createGain()
+    this.masterGain = this.context.createGain()
+    
+    this.o.type = type
+    this.masterGain.gain.value = initialGain
+
+    this.o.connect(this.gain)
+
+    this.gain.connect(this.masterGain)
+
+    this.masterGain.connect(this.context.destination)
+    this.o.start()
+  }
+
+  newFrequency(frequency) {
+    // this.o.frequency.value = frequency
+    this.o.frequency.setValueAtTime(frequency, 0)
+  }
+
+  setGain(gain) {
+    this.gain.gain.value = gain
+  }
+}
+
+const voice1 = new Voice('triangle', 0.05)
+// const voice2 = new Voice('triangle', 0.05)
+// const voice3 = new Voice('sawtooth', 0.1)
+// const voice4 = new Voice('sawtooth', 0.1)
+
+
 // All the control buttons
 const Controls = ({ simulating, tick, reinitialize, start, pause }) => (
   <div>
@@ -142,6 +303,10 @@ const Controls = ({ simulating, tick, reinitialize, start, pause }) => (
     <button onClick={() => tick()} style={simulating ? {opacity: 0.2} : {}}>Advance</button>
     <button onClick={() => reinitialize(true)}>Randomize</button>
     <button onClick={() => reinitialize(false)}>Clear</button>
+    <button onClick={() => voice1.setGain(0)}>Voice1 Stop</button>
+    { /* <button onClick={() => voice2.setGain(0)}>Voice2 Stop</button>
+    <button onClick={() => {soundNote(noteValues['C#4'], 0.2)}}>Play Note</button>
+    <button onClick={soundStop}>Stop Sound</button> */ }
   </div>
 )
 Controls.propTypes = {
@@ -243,6 +408,7 @@ const GameOfLifeApp = () => (
     <ControlsContainer />
     <GenerationCounterContainer />
     <BoardContainer />
+    <UpdateSoundsContainer />
   </div>
 )
 
