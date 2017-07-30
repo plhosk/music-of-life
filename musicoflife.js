@@ -4,7 +4,8 @@
 const ROWS = 50 // height of board
 const COLS = 120 // width 
 const STEP_INTERVAL = 50 // milliseconds
-const RANDOM_DENSITY = 0.37
+const RANDOM_DENSITY = 0.3
+// const RANDOM_DENSITY = 0.37
 
 // LIBRARIES: React, Redux, React-Redux
 const { Component } = React
@@ -193,8 +194,8 @@ const scales = {
   chromatic: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
 }
 
-const scaleName = 'pentatonic'
-const initialNote = 48 // C3
+const scaleName = 'major'
+const initialNote = 24
 
 // TODO: use d3-scale?
 
@@ -247,9 +248,13 @@ const UpdateSounds = ({ board, generation }) => {
     Math.floor(factor1 * currentScale.length)
   ]
 
-  // console.log(frequency1)
+  // let freqMax = noteValues['C7']
+  // let freqMin = noteValues['C2']
+  // let frequency2 = factor1 * (freqMax - freqMin) + freqMin
+
   // Modify audio voices
   voice1.newFrequency(frequency1)
+  // voice2.newFrequency(frequency2)
   // voice2.newFrequency(frequency1 * 1.25992)
   // voice2.newFrequency(frequency1 * 1.49831)
   // voice2.newFrequency(frequency1 * 2)
@@ -262,7 +267,11 @@ const UpdateSoundsContainer = connect(mapStateToUpdateSoundsProps)(UpdateSounds)
 
 
 const Voice = class {
-  constructor(type, initialGain) {
+  constructor(type, initialGain, riseTime, riseConst, decayConst) {
+    this.riseTime = riseTime
+    this.riseConst = riseConst
+    this.decayConst = decayConst
+
     this.context = new AudioContext()
     this.o = this.context.createOscillator()
     this.gain = this.context.createGain()
@@ -272,25 +281,37 @@ const Voice = class {
     this.masterGain.gain.value = initialGain
 
     this.o.connect(this.gain)
-
     this.gain.connect(this.masterGain)
-
     this.masterGain.connect(this.context.destination)
+
+    this.lfo = this.context.createOscillator()
+    this.lfo.frequency.value = 6
+    this.lfoGain = this.context.createGain()
+    this.lfoGain.gain.value = 2
+    this.lfo.connect(this.lfoGain)
+    this.lfoGain.connect(this.o.frequency)
+
+    this.lfo.start()
     this.o.start()
   }
 
   newFrequency(frequency) {
-    // this.o.frequency.value = frequency
+    if (frequency < this.o.frequency.value + 1 && this.o.frequency.value - 1 < frequency) {
+      return null
+    }
+    this.gain.gain.value = 0
     this.o.frequency.setValueAtTime(frequency, 0)
+    this.gain.gain.setTargetAtTime(1, this.context.currentTime, 0.0001)
+    this.gain.gain.setTargetAtTime(0, this.context.currentTime + this.riseTime, this.decayConst)
   }
 
   setGain(gain) {
-    this.gain.gain.value = gain
+    this.masterGain.gain.value = gain
   }
 }
 
-const voice1 = new Voice('triangle', 0.05)
-// const voice2 = new Voice('triangle', 0.05)
+const voice1 = new Voice('sawtooth', 0.02, 2, 0.01, 0.3)
+// const voice2 = new Voice('triangle', 0.02)
 // const voice3 = new Voice('sawtooth', 0.1)
 // const voice4 = new Voice('sawtooth', 0.1)
 
@@ -304,8 +325,8 @@ const Controls = ({ simulating, tick, reinitialize, start, pause }) => (
     <button onClick={() => reinitialize(true)}>Randomize</button>
     <button onClick={() => reinitialize(false)}>Clear</button>
     <button onClick={() => voice1.setGain(0)}>Voice1 Stop</button>
-    { /* <button onClick={() => voice2.setGain(0)}>Voice2 Stop</button>
-    <button onClick={() => {soundNote(noteValues['C#4'], 0.2)}}>Play Note</button>
+    <button onClick={() => voice2.setGain(0)}>Voice2 Stop</button>
+    { /* <button onClick={() => {soundNote(noteValues['C#4'], 0.2)}}>Play Note</button>
     <button onClick={soundStop}>Stop Sound</button> */ }
   </div>
 )
