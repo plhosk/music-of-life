@@ -1,7 +1,13 @@
 {
-  "name": "musicoflife",
+  "name": "music-of-life",
   "version": "0.1.0",
+  "description": "Generate music from cellular automata",
+  "author": "Paul Hoskinson",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url" : "https://github.com/plhosk/music-of-life.git"
+  },
   "dependencies": {
     "d3-scale": "^1.0.6",
     "prop-types": "^15.5.10",
@@ -15,6 +21,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "surge": "surge build music-of-life.surge.sh"
   }
 }
