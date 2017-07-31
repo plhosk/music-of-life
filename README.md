@@ -4,10 +4,10 @@ The basic idea is to analyze the 2D plane of the cellular automaton as it evolve
 
 Possible forms of signal analysis to derive information from the continuously changing 2D plane:
 
-1. Count of live cells (in entire plane or a certain region)
+- Count of live cells (in entire plane or a certain region)
   - Can filter old cells (age > 7 or  perhaps higher) to detect degenerate forms
   - Tends to decrease over time until halting state
-1. Average age of live cells in area (up to a certain limit)
+- Average age of live cells in area (up to a certain limit)
 - Ratio of degenerate cells to active cells
 - Number of cells created or destroyed
 - Divide the plane into a grid and map properties of each grid area to a 2D array
@@ -28,3 +28,17 @@ The simplest approach would be to attempt to distill the "true essence" of the s
 What configuration would work for an interactive synthesizer? Controls should be easy to use, yet responsive and deep. Multiple voices could be added and customized quickly to build an ensemble.
 
 Web controls can include 1D sliders, 2D touchpanels, quantized radio buttons/checkboxes/dropdown selectors
+
+Voice controls:
+- Instrument (oscillator type, .wav file, audio stream...)
+- Frequency (oscillator output or audio frequency shift)
+- Gain (volume)
+- Envelope (ramp speed, sustain)
+- Vibrato
+- Audio filter (phase, low pass, high pass, band pass) - filter parameters can be controlled
+- Rhythm (constant tone vs repeated notes vs intermittent, when to initiate note, when to stop)
+
+Possible control configurations: 
+
+*(scale-type synthesizer)*
+- Master gain slider
