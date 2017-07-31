@@ -40,8 +40,23 @@ Voice controls:
 
 Possible control configurations: 
 
-All voices:
-- Master gain slider
+Connect output generators on 1 side with synthesizers on other side
+
+**Output generators:**
+- any from above list. Need to distill the best signals
+- Have good presets as default or selectable
+
+**Mapping stage:**
+- Clamp signal
+- Invert
+- Exp/Log
 
 **Synthesizer**
 - Master gain slider
+- Oscillator type (sine, triangle, square, sawtooth)
+- Scale dropdown (continuous, chromatic, major, pentatonic) + key dropdown
+- Envelope presets
+- Controllable filter presets
+- Rhythm control?
+
+Maybe just have only presets able to be selected in UI to massively simplify UI. Add new presets with js
