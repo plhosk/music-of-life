@@ -1,13 +1,13 @@
 This is a demo using the Web Audio API to generate sounds from a Game of Life cellular automaton.
 
-The basic flow is to analyze the 2D plane of the cellular automaton and convert this information to commands to be sent to a sound synthesizer. 
+The basic idea is to analyze the 2D plane of the cellular automaton as it evolves and convert this information to commands to be sent to a sound synthesizer. 
 
 Possible forms of signal analysis to derive information from the continuously changing 2D plane:
 
-- Count of live cells (in entire plane or a certain region)
-  - Can filter old cells (age > 7? or maybe higher) to detect degenerate forms
+1. Count of live cells (in entire plane or a certain region)
+  - Can filter old cells (age > 7 or  perhaps higher) to detect degenerate forms
   - Tends to decrease over time until halting state
-- Average age of live cells in area (up to a certain limit)
+1. Average age of live cells in area (up to a certain limit)
 - Ratio of degenerate cells to active cells
 - Number of cells created or destroyed
 - Divide the plane into a grid and map properties of each grid area to a 2D array
