@@ -40,5 +40,8 @@ Voice controls:
 
 Possible control configurations: 
 
-*(scale-type synthesizer)*
+All voices:
+- Master gain slider
+
+**Synthesizer**
 - Master gain slider
