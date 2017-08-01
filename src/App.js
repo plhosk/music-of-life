@@ -55,15 +55,16 @@ for (let key = 0; key < 12; key += 1) {
  */
 
 const context = new AudioContext()
+const overallVolume = context.createGain()
+overallVolume.gain.value = 0.5
 const merger = context.createChannelMerger(1)
-merger.connect(context.destination)
-
+merger.connect(overallVolume)
+overallVolume.connect(context.destination)
 
 const Voice = class {
-  constructor(type, repeat, initialGain, lfoGain, lfoFreq, riseTime, riseConst, decayConst) {
+  constructor(type, repeat, initialGain, lfoGain, lfoFreq, riseTime, riseConst) {
     this.riseTime = riseTime
     this.riseConst = riseConst
-    this.decayConst = decayConst
 
     this.o = context.createOscillator()
     this.o.frequency.value = 1
@@ -91,43 +92,16 @@ const Voice = class {
 
     this.lfo.start()
     this.o.start()
-    // this.riseTime = riseTime
-    // this.riseConst = riseConst
-    // this.decayConst = decayConst
-
-    // this.context = new AudioContext()
-    // this.o = this.context.createOscillator()
-    // this.o.frequency.value = 523.3
-    // this.gain = this.context.createGain()
-    // this.masterGain = this.context.createGain()
-    
-    // this.o.type = type
-    // this.repeat = repeat
-    // this.masterGain.gain.value = initialGain
-
-    // this.o.connect(this.gain)
-    // this.gain.connect(this.masterGain)
-    // this.masterGain.connect(this.context.destination)
-
-    // this.lfo = this.context.createOscillator()
-    // this.lfo.frequency.value = lfoFreq
-    // this.lfoGain = this.context.createGain()
-    // this.lfoGain.gain.value = lfoGain
-    // this.lfo.connect(this.lfoGain)
-    // this.lfoGain.connect(this.o.frequency)
-
-    // this.lfo.start()
-    // this.o.start()
   }
 
-  newFrequency(frequency) {
+  newFrequency(frequency, decayConst) {
     if (!this.repeat && frequency < this.o.frequency.value + 0.5 && this.o.frequency.value - 0.5 < frequency) {
       return null
     }
     this.gain.gain.value = 0
     this.o.frequency.setValueAtTime(frequency, 0)
     this.gain.gain.setTargetAtTime(1, context.currentTime, 0.0001)
-    this.gain.gain.setTargetAtTime(0, context.currentTime + this.riseTime, this.decayConst)
+    this.gain.gain.setTargetAtTime(0, context.currentTime + this.riseTime, decayConst)
   }
 
   setGain(gain) {
@@ -197,6 +171,8 @@ const calculateScales = (semitoneOffset) => {
 
 calculateScales(semitoneOffset)
 
+console.log('currentScale.length:', currentScale.length, 'bassScale.length:', bassScale.length, 'Columns:', COLS)
+
 let columnKeyboardVolume = 0
 let columnKeyboardFullVolumeGeneration = 100
 const calculateMixGainFactor = () => {
@@ -204,28 +180,29 @@ const calculateMixGainFactor = () => {
 }
 let mixGainFactor = calculateMixGainFactor()
 
+let decayConst = 1
+
+// Instantiate voice(s)
+// constructor(type, repeat, initialGain, lfoGain, lfoFreq, riseTime, riseConst)
+
 // 1 voice for each note of scale
 const columnKeyboard = []
 for (let i = 0; i < currentScale.length; i += 1) {
-  columnKeyboard[i] = new Voice('sawtooth', true, 0, 1, 6, 0.01, 0.05, 0.5)
+  columnKeyboard[i] = new Voice('sawtooth', true, 0, 1, 6, 0.01, 0.05)
 }
 
+// 1 voice follows the most active column area
 const brightestRange = 1
 const brightestVoices = []
 for (let i = 0; i < brightestRange; i += 1) {
-  brightestVoices[i] = new Voice('triangle', false, 0.03, 1, 6, 0.01, 0.05, 1)
+  brightestVoices[i] = new Voice('triangle', false, 0.03, 1, 6, 0.01, 0.05)
 }
 
-console.log('currentScale.length:', currentScale.length, 'bassScale.length:', bassScale.length, 'Columns:', COLS)
 
-// Instantiate voice(s)
-// constructor(type, repeat, initialGain, lfoGain, lfoFreq, riseTime, riseConst, decayConst)
-const voice1 = new Voice('square', false, 0.04, 3, 6, 0.01, 0.001, 1) // 0.03
-// const voice2 = new Voice('square', true, 0.05, 2, 6, 0.01, 0.001, 1)
-const voice3 = new Voice('square', false, 0.015, 2, 6, 0.01, 0.001, 1) // 0.015
+const bassLine = new Voice('square', false, 0.04, 3, 8, 0.01, 0.001) // 0.03
+const ageVoice = new Voice('square', false, 0.01, 2, 6, 0.01, 0.001) // 0.015
 
-const drum1 = new Voice('square', true, 0.06, 0, 6, 0.01, 0.001, 0.001)
-// const drum2 = new Voice('square', true, 0.03, 0, 6, 0.01, 0.001, 0.001)
+const drum1 = new Voice('square', true, 0.06, 0, 6, 0.01, 0.001)
 
 /**
  * React component to compute updates to the Web Audio API.
@@ -235,42 +212,34 @@ const UpdateSounds = ({ board, generation }) => {
 
   columnKeyboardVolume = generation > columnKeyboardFullVolumeGeneration ? 1 : generation / columnKeyboardFullVolumeGeneration
   mixGainFactor = calculateMixGainFactor()
-
   const [allActiveCount, allActiveAgeAverage] = iterateAllCells(board)
+  decayConst = Math.sqrt(allActiveCount / (ROWS * COLS))
+
+  if (generation !== 0 && generation % 192 === 0) {
+    let offsetList = [0, 2, 4, 6, 8]
+    semitoneOffset = offsetList[Math.floor(Math.random() * offsetList.length)]
+    calculateScales(semitoneOffset)
+  }
 
   if (generation % 1 === 0) {
-    // const binCols = 2
-    // create scale
-    // const colToFreq = scaleQuantize()
-    //   .domain([0, COLS])
-    //   .range(currentScale)
 
     const keyActiveTotals = {}
 
     for (let note = 0; note < currentScale.length; note += 1) {
       let sumOfActiveCellsAvg = 0
-      // let sumOfAvgAges = 0
       let numCols = 0
       for (let col = Math.floor(note / currentScale.length * COLS);
         col < COLS && col < Math.floor((note + 1) / currentScale.length * COLS);
         col += 1) {
-        const [activeCells, avgAge] = iterateCol(board, col)
+        const [activeCells] = iterateCol(board, col)
         numCols += 1
         sumOfActiveCellsAvg += activeCells / ROWS
-        // sumOfAvgAges += avgAge
       }
-      // ageFraction: 0 = young, 1 = highest age
-      // let ageFraction = ((sumOfAvgAges / numCols) / 6)
-      // ageFraction = Math.log(ageFraction + 1) / 0.6931471805599453
-      // ageFraction = Math.log(ageFraction + 1) / 0.6931471805599453
-      
       let adjustedGain = sumOfActiveCellsAvg / numCols
       keyActiveTotals[note] = sumOfActiveCellsAvg / numCols
       adjustedGain = Math.log(adjustedGain + 1) / 0.6931471805599453
-      // adjustedGain = Math.log(adjustedGain + 1) / 0.6931471805599453
-      // voices[note].setBiquadFrequency(currentScale[Math.floor(ageFraction * (currentScale.length - 1))])
       columnKeyboard[note].setGain(adjustedGain * mixGainFactor)
-      columnKeyboard[note].newFrequency(currentScale[note])
+      columnKeyboard[note].newFrequency(currentScale[note], 0.5)
     }
 
     // analyze brightest notes
@@ -278,118 +247,41 @@ const UpdateSounds = ({ board, generation }) => {
       const keyActiveSorted = Object.keys(keyActiveTotals)
       keyActiveSorted.sort((a,b) => keyActiveTotals[b] - keyActiveTotals[a])
       for (let i = 0; i < brightestRange; i += 1) {
-        brightestVoices[i].newFrequency(currentScale[keyActiveSorted[i]])
+        brightestVoices[i].newFrequency(currentScale[keyActiveSorted[i]], decayConst)
       }
     }
   }
 
-  // Voice 1
-  // fraction of active cells => note on scale
+  // Bass Line
+  // fraction of active cells
   if (generation % 8 === 0) {
     const noteScale = scaleQuantize()
       .domain([0, Math.sqrt(ROWS * COLS)])
       .range(bassScale)
-    voice1.newFrequency(noteScale(Math.sqrt(allActiveCount)))
+    bassLine.newFrequency(noteScale(Math.sqrt(allActiveCount)), decayConst)
   }
 
-  // // Voice 2
-  // // bass line
-  // if (generation % 8 === 0) {
-  //   const noteScale = scaleQuantize()
-  //     .domain([0, Math.sqrt(ROWS * COLS)])
-  //     .range(scales[semitoneOffset % 12].chromatic)
-  //   voice2.newFrequency(noteScale(Math.sqrt(activeTotal)))
-  // }
-
-  // // Voice 3
-  // // fraction of active cells => note on scale
+  // Age Voice
+  // Average age of active cells
   if (generation % 4 === 0) {
     const noteScale = scaleQuantize()
       .domain([1, 3])
       .range(ageScale) // choose octave
-    voice3.newFrequency(noteScale(allActiveAgeAverage))
+    ageVoice.newFrequency(noteScale(allActiveAgeAverage), decayConst)
   }
 
-  if (generation % 16 === 0) {
-    drum1.newFrequency(currentScale[0])
+  // Drum sound
+  if (generation !== 0 && generation % 16 === 0) {
+    if (decayConst >= 0.1) {
+      drum1.newFrequency(currentScale[0], decayConst * 0.001)
+    }
   }
-  // if (generation % 4 === 0) {
-  //   drum2.newFrequency(currentScale[0])
-  // }
-
-  /**
-   * Mappings from derived simulation data to Voice method calls
-   */
-
-  // let freqMax = noteValues['C7']
-  // let freqMin = noteValues['C2']
-  // let frequency2 = factor1 * (freqMax - freqMin) + freqMin
-
-  // Modify audio voices
-  // voice2.newFrequency(frequency2)
-  // voice2.newFrequency(frequency1 * 1.25992)
-  // voice2.newFrequency(frequency1 * 1.49831)
-  // voice2.newFrequency(frequency1 * 2)
 
   // Don't actually render anything to the DOM
   return null
 }
 const mapStateToUpdateSoundsProps = ({ board, generation }) => ({ board, generation })
 const UpdateSoundsContainer = connect(mapStateToUpdateSoundsProps)(UpdateSounds)
-
-
-// const context = new AudioContext()
-// const o = context.createOscillator()
-// o.type = 'sawtooth'
-// const gain = context.createGain()
-// const masterGain = context.createGain()
-// o.connect(gain)
-// gain.connect(masterGain)
-// masterGain.gain.value = 0
-// masterGain.connect(context.destination)
-
-// const lfo = context.createOscillator()
-// lfo.frequency.value = 6
-// const lfoGain = context.createGain()
-// lfoGain.gain.value = 2
-// lfo.connect(lfoGain)
-// lfoGain.connect(o.frequency)
-
-// lfo.start()
-// o.start()
-
-
-// const soundStart = () => {
-//   masterGain.gain.linearRampToValueAtTime(
-//     0.2,
-//     context.currentTime + 0.1
-//   )
-// }
-
-// const soundNote = (frequency, rampTime) => {
-//   // o.frequency.value = frequency
-//   o.frequency.setValueAtTime(frequency, context.currentTime)
-//   // masterGain.gain.linearRampToValueAtTime(
-//   //   0.2,
-//   //   context.currentTime + rampTime
-//   // )
-//   // masterGain.gain.setValueAtTime(0.2, 0)
-//   masterGain.gain.value = 0.2
-//   masterGain.gain.linearRampToValueAtTime(
-//     0.00001,
-//     context.currentTime + rampTime
-//   )
-// }
-
-// const soundStop = () => {
-//   masterGain.gain.exponentialRampToValueAtTime(
-//     0.00001,
-//     context.currentTime + 0.1
-//   )
-// }
-
-
-
 
 
 // MISC FUNCTIONS
