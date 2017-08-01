@@ -19,6 +19,8 @@ The basic idea is to analyze the 2D plane of the cellular automaton as it evolve
 
 Whenever the simulation is running, the program will generate audio.
 
+You can also left-click or left-drag to create new cells (either while the simulation is running or when it's paused) and right-click to erase cells.
+
 There are options that are only available by editing the source code:
 - Board size
 - Time interval between generations
