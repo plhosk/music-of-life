@@ -88,6 +88,8 @@ const frequencies = [
   1864.66,
   1975.53,
   2093.00,
+]
+/*
   2217.46,
   2349.32,
   2489.02,
@@ -101,6 +103,7 @@ const frequencies = [
   3951.07,
   4186.01,
 ]
+*/
 
 export default frequencies
 

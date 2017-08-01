@@ -11,9 +11,9 @@ import frequencies from './frequencies.js'
 
 // CONSTANTS
 const ROWS = 30 // height of board. default 50
-const COLS = 50 // width. default 120
-const STEP_INTERVAL = 100 // milliseconds
-const RANDOM_DENSITY = 0.37
+const COLS = 80 // width. default 120
+const STEP_INTERVAL = 50 // milliseconds
+const RANDOM_DENSITY = 0.37 // 0.37
 // const RANDOM_DENSITY = 0.37 // optimum value
 
 
@@ -24,6 +24,10 @@ const scaleDefinitions = {
   pentatonic: [0, 2, 4, 7, 9],
   wholetone: [0, 2, 4, 6, 8, 10],
   chromatic: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+  chordMinor: [0, 3, 7],
+  chordMajor: [0, 4, 7],
+  chordMajor7: [0, 4, 7, 11],
+  chordMajorFlat7: [0, 4, 7, 10],
 }
 
 const scales = {}
@@ -34,8 +38,9 @@ for (let key = 0; key < 12; key += 1) {
     // Generate sequence of frequencies in an array.
     // This allows for the mapping of simulation output values to quantized frequencies (musical scales)
     scales[key][scaleType] = []
-    for (let i = key; i + 12 < frequencies.length; i+= 12) {
+    for (let i = key; i < frequencies.length; i+= 12) {
       for (let semitone = 0; semitone < 12; semitone += 1 ) {
+        if (i + semitone > frequencies.length) continue
         if (scaleDefinitions[scaleType].includes(semitone)) {
           scales[key][scaleType].push(frequencies[i + semitone])
         }
@@ -48,35 +53,71 @@ for (let key = 0; key < 12; key += 1) {
  * Define synthesizer voices
  * TODO - replace with proper synthesizer library?
  */
+
+const context = new AudioContext()
+const merger = context.createChannelMerger(1)
+merger.connect(context.destination)
+
+
 const Voice = class {
   constructor(type, repeat, initialGain, lfoGain, lfoFreq, riseTime, riseConst, decayConst) {
     this.riseTime = riseTime
     this.riseConst = riseConst
     this.decayConst = decayConst
 
-    this.context = new AudioContext()
-    this.o = this.context.createOscillator()
-    this.o.frequency.value = 523.3
-    this.gain = this.context.createGain()
-    this.masterGain = this.context.createGain()
+    this.o = context.createOscillator()
+    this.o.frequency.value = 1
+    this.gain = context.createGain()
+    this.masterGain = context.createGain()
+    this.biquad = context.createBiquadFilter()
+    this.biquad.type = 'bandpass'
+    this.biquad.Q.value = 0
     
     this.o.type = type
     this.repeat = repeat
     this.masterGain.gain.value = initialGain
 
-    this.o.connect(this.gain)
+    this.o.connect(this.biquad)
+    this.biquad.connect(this.gain)
     this.gain.connect(this.masterGain)
-    this.masterGain.connect(this.context.destination)
+    this.masterGain.connect(merger)
 
-    this.lfo = this.context.createOscillator()
+    this.lfo = context.createOscillator()
     this.lfo.frequency.value = lfoFreq
-    this.lfoGain = this.context.createGain()
+    this.lfoGain = context.createGain()
     this.lfoGain.gain.value = lfoGain
     this.lfo.connect(this.lfoGain)
     this.lfoGain.connect(this.o.frequency)
 
     this.lfo.start()
     this.o.start()
+    // this.riseTime = riseTime
+    // this.riseConst = riseConst
+    // this.decayConst = decayConst
+
+    // this.context = new AudioContext()
+    // this.o = this.context.createOscillator()
+    // this.o.frequency.value = 523.3
+    // this.gain = this.context.createGain()
+    // this.masterGain = this.context.createGain()
+    
+    // this.o.type = type
+    // this.repeat = repeat
+    // this.masterGain.gain.value = initialGain
+
+    // this.o.connect(this.gain)
+    // this.gain.connect(this.masterGain)
+    // this.masterGain.connect(this.context.destination)
+
+    // this.lfo = this.context.createOscillator()
+    // this.lfo.frequency.value = lfoFreq
+    // this.lfoGain = this.context.createGain()
+    // this.lfoGain.gain.value = lfoGain
+    // this.lfo.connect(this.lfoGain)
+    // this.lfoGain.connect(this.o.frequency)
+
+    // this.lfo.start()
+    // this.o.start()
   }
 
   newFrequency(frequency) {
@@ -85,22 +126,22 @@ const Voice = class {
     }
     this.gain.gain.value = 0
     this.o.frequency.setValueAtTime(frequency, 0)
-    this.gain.gain.setTargetAtTime(1, this.context.currentTime, 0.0001)
-    this.gain.gain.setTargetAtTime(0, this.context.currentTime + this.riseTime, this.decayConst)
+    this.gain.gain.setTargetAtTime(1, context.currentTime, 0.0001)
+    this.gain.gain.setTargetAtTime(0, context.currentTime + this.riseTime, this.decayConst)
   }
 
   setGain(gain) {
     this.masterGain.gain.value = gain
   }
-}
 
-// Instantiate voice(s)
-// constructor(type, initialGain, riseTime, riseConst, decayConst)
-const voice1 = new Voice('sawtooth', false, 0.05, 2, 6, 0.01, 0.001, 1)
-const voice2 = new Voice('square', true, 0.05, 2, 6, 0.01, 0.001, 1)
-const voice3 = new Voice('square', false, 0.025, 2, 6, 0.01, 0.001, 1)
-// const voice3 = new Voice('sawtooth', 0.1)
-// const voice4 = new Voice('sawtooth', 0.1)
+  setBiquadQ(q) {
+    this.biquad.Q.value = q
+  }
+  setBiquadFrequency(frequency) {
+    console.log(frequency)
+    this.biquad.frequency.value = frequency
+  }
+}
 
 const iterateAllCells = (board) => {
 
@@ -125,44 +166,156 @@ const iterateAllCells = (board) => {
   ]
 }
 
+const iterateCol = (board, col) => {
+  let activeCellsInCol = 0
+  let sumOfActiveAges = 0
+  for (let row = 0; row < ROWS; row += 1) {
+    if (board[row][col] > 0 && board[row][col] !== 7) {
+      activeCellsInCol += 1
+      sumOfActiveAges += board[row][col]
+    }
+  }
+  return [
+    activeCellsInCol,
+    activeCellsInCol === 0 ? 0 : sumOfActiveAges / activeCellsInCol,
+  ]
+}
+
+let semitoneOffset = 0
+let currentScale = []
+let bassScale = []
+let ageScale = []
+const calculateScales = (semitoneOffset) => {
+  currentScale = scales[semitoneOffset.toString()].major.slice(18, -7)
+  // const currentScale = scales['0'].chordMajor.slice(6, -6)
+  // const bassScale = scales['0'].major.slice(7, -24)
+  bassScale = scales[semitoneOffset.toString()].pentatonic.slice(8, -10)
+  ageScale = scales[semitoneOffset.toString()].major.slice(12, -12)
+  // const currentScale = scales['0'].wholetone.slice(12, -6)
+  // const currentScale = scales['0'].chromatic.slice(12, -12)
+}
+
+calculateScales(semitoneOffset)
+
+let columnKeyboardVolume = 0
+let columnKeyboardFullVolumeGeneration = 100
+const calculateMixGainFactor = () => {
+  return 1 / currentScale.length * columnKeyboardVolume
+}
+let mixGainFactor = calculateMixGainFactor()
+
+// 1 voice for each note of scale
+const columnKeyboard = []
+for (let i = 0; i < currentScale.length; i += 1) {
+  columnKeyboard[i] = new Voice('sawtooth', true, 0, 1, 6, 0.01, 0.05, 0.5)
+}
+
+const brightestRange = 1
+const brightestVoices = []
+for (let i = 0; i < brightestRange; i += 1) {
+  brightestVoices[i] = new Voice('triangle', false, 0.03, 1, 6, 0.01, 0.05, 1)
+}
+
+console.log('currentScale.length:', currentScale.length, 'bassScale.length:', bassScale.length, 'Columns:', COLS)
+
+// Instantiate voice(s)
+// constructor(type, repeat, initialGain, lfoGain, lfoFreq, riseTime, riseConst, decayConst)
+const voice1 = new Voice('square', false, 0.04, 3, 6, 0.01, 0.001, 1) // 0.03
+// const voice2 = new Voice('square', true, 0.05, 2, 6, 0.01, 0.001, 1)
+const voice3 = new Voice('square', false, 0.015, 2, 6, 0.01, 0.001, 1) // 0.015
+
+const drum1 = new Voice('square', true, 0.06, 0, 6, 0.01, 0.001, 0.001)
+// const drum2 = new Voice('square', true, 0.03, 0, 6, 0.01, 0.001, 0.001)
+
 /**
  * React component to compute updates to the Web Audio API.
  * This runs once every generation
 */
 const UpdateSounds = ({ board, generation }) => {
-  /**
-   * 0 dimensional measures - getActiveTotal,
-   */
-  const [activeTotal, averageAgeOfActive] = iterateAllCells(board)
+
+  columnKeyboardVolume = generation > columnKeyboardFullVolumeGeneration ? 1 : generation / columnKeyboardFullVolumeGeneration
+  mixGainFactor = calculateMixGainFactor()
+
+  const [allActiveCount, allActiveAgeAverage] = iterateAllCells(board)
+
+  if (generation % 1 === 0) {
+    // const binCols = 2
+    // create scale
+    // const colToFreq = scaleQuantize()
+    //   .domain([0, COLS])
+    //   .range(currentScale)
+
+    const keyActiveTotals = {}
+
+    for (let note = 0; note < currentScale.length; note += 1) {
+      let sumOfActiveCellsAvg = 0
+      // let sumOfAvgAges = 0
+      let numCols = 0
+      for (let col = Math.floor(note / currentScale.length * COLS);
+        col < COLS && col < Math.floor((note + 1) / currentScale.length * COLS);
+        col += 1) {
+        const [activeCells, avgAge] = iterateCol(board, col)
+        numCols += 1
+        sumOfActiveCellsAvg += activeCells / ROWS
+        // sumOfAvgAges += avgAge
+      }
+      // ageFraction: 0 = young, 1 = highest age
+      // let ageFraction = ((sumOfAvgAges / numCols) / 6)
+      // ageFraction = Math.log(ageFraction + 1) / 0.6931471805599453
+      // ageFraction = Math.log(ageFraction + 1) / 0.6931471805599453
+      
+      let adjustedGain = sumOfActiveCellsAvg / numCols
+      keyActiveTotals[note] = sumOfActiveCellsAvg / numCols
+      adjustedGain = Math.log(adjustedGain + 1) / 0.6931471805599453
+      // adjustedGain = Math.log(adjustedGain + 1) / 0.6931471805599453
+      // voices[note].setBiquadFrequency(currentScale[Math.floor(ageFraction * (currentScale.length - 1))])
+      columnKeyboard[note].setGain(adjustedGain * mixGainFactor)
+      columnKeyboard[note].newFrequency(currentScale[note])
+    }
+
+    // analyze brightest notes
+    if (generation % 4 === 0) {
+      const keyActiveSorted = Object.keys(keyActiveTotals)
+      keyActiveSorted.sort((a,b) => keyActiveTotals[b] - keyActiveTotals[a])
+      for (let i = 0; i < brightestRange; i += 1) {
+        brightestVoices[i].newFrequency(currentScale[keyActiveSorted[i]])
+      }
+    }
+  }
 
   // Voice 1
   // fraction of active cells => note on scale
   if (generation % 8 === 0) {
     const noteScale = scaleQuantize()
       .domain([0, Math.sqrt(ROWS * COLS)])
-      .range(scales[semitoneOffset % 12].chromatic.slice(24, scales[semitoneOffset % 12].chromatic.length - 24)) // choose octave
-    voice1.newFrequency(noteScale(Math.sqrt(activeTotal)))
+      .range(bassScale)
+    voice1.newFrequency(noteScale(Math.sqrt(allActiveCount)))
   }
 
-  // Voice 2
-  // bass line
-  if (generation % 8 === 0) {
-    const noteScale = scaleQuantize()
-      .domain([0, Math.sqrt(ROWS * COLS)])
-      .range(scales[semitoneOffset % 12].chromatic)
-    voice2.newFrequency(noteScale(Math.sqrt(activeTotal)))
-  }
+  // // Voice 2
+  // // bass line
+  // if (generation % 8 === 0) {
+  //   const noteScale = scaleQuantize()
+  //     .domain([0, Math.sqrt(ROWS * COLS)])
+  //     .range(scales[semitoneOffset % 12].chromatic)
+  //   voice2.newFrequency(noteScale(Math.sqrt(activeTotal)))
+  // }
 
-  // Voice 3
-  // fraction of active cells => note on scale
-  if (generation % 8 === 0) {
+  // // Voice 3
+  // // fraction of active cells => note on scale
+  if (generation % 4 === 0) {
     const noteScale = scaleQuantize()
       .domain([1, 3])
-      // .range(scales[semitoneOffset % 12].major.slice(24)) // choose octave
-      .range(scales[semitoneOffset % 12].chromatic.slice(0, scales[semitoneOffset % 12].chromatic.length - 0)) // choose octave
-    voice3.newFrequency(noteScale(averageAgeOfActive))
-    // console.log(averageAgeOfActive)
+      .range(ageScale) // choose octave
+    voice3.newFrequency(noteScale(allActiveAgeAverage))
   }
+
+  if (generation % 16 === 0) {
+    drum1.newFrequency(currentScale[0])
+  }
+  // if (generation % 4 === 0) {
+  //   drum2.newFrequency(currentScale[0])
+  // }
 
   /**
    * Mappings from derived simulation data to Voice method calls
@@ -359,20 +512,42 @@ class AutoStep extends Component {
   }
 }
 
-let semitoneOffset = 0
 
 // All the control buttons
 const Controls = ({ simulating, tick, reinitialize, start, pause }) => (
   <div>
-    {simulating && <AutoStep tick={tick} />}
-    {simulating ? (<button onClick={() => pause()}>Pause</button>) : (<button onClick={() => start()}>Start</button>)}
-    <button onClick={() => tick()} style={simulating ? {opacity: 0.2} : {}}>Advance</button>
-    <button onClick={() => reinitialize(true)}>Randomize</button>
-    <button onClick={() => reinitialize(false)}>Clear</button>
-    <button onClick={() => semitoneOffset += 2}>semitoneOffset +2</button>
-    { /* <button onClick={() => voice2.setGain(0)}>Voice2 Stop</button>
-    <button onClick={() => {soundNote(noteValues['C#4'], 0.2)}}>Play Note</button>
-    <button onClick={soundStop}>Stop Sound</button> */ }
+    <div>
+      {simulating && <AutoStep tick={tick} />}
+      {simulating ? (<button onClick={() => pause()}>Pause</button>) : (<button onClick={() => start()}>Start</button>)}
+      <button onClick={() => tick()} style={simulating ? {opacity: 0.2} : {}}>Advance</button>
+      <button onClick={() => reinitialize(true)}>Randomize</button>
+      <button onClick={() => reinitialize(false)}>Clear</button>
+    </div>
+    <div>
+      <button onClick={() => {
+        semitoneOffset = 0
+        calculateScales(semitoneOffset)
+      }}>key 0</button>
+      <button onClick={() => {
+        semitoneOffset = 2
+        calculateScales(semitoneOffset)
+      }}>key 2</button>
+      <button onClick={() => {
+        semitoneOffset = 4
+        calculateScales(semitoneOffset)
+      }}>key 4</button>
+      <button onClick={() => {
+        semitoneOffset = 6
+        calculateScales(semitoneOffset)
+      }}>key 6</button>
+      <button onClick={() => {
+        semitoneOffset = 8
+        calculateScales(semitoneOffset)
+      }}>key 8</button>
+      { /* <button onClick={() => voice2.setGain(0)}>Voice2 Stop</button>
+      <button onClick={() => {soundNote(noteValues['C#4'], 0.2)}}>Play Note</button>
+      <button onClick={soundStop}>Stop Sound</button> */ }
+    </div>
   </div>
 )
 Controls.propTypes = {
@@ -407,7 +582,6 @@ class Cell extends Component {
     if (e.buttons === 0) {
       return
     }
-    console.log(typeof e.currentTarget.dataset.age)
     if (e.buttons === 1 && parseInt(e.currentTarget.dataset.age, 10) === 0) {
       this.props.handleLeftClick(e.currentTarget.dataset.row, e.currentTarget.dataset.col)
       return
@@ -493,7 +667,8 @@ const GenerationCounterContainer = connect(mapStateToGenerationCounterProps)(Gen
 
 const GameOfLifeApp = () => (
   <div>
-    <h1>Conway's Game of Life (React/Redux)</h1>
+    <h1>Music of Life</h1>
+    <h3>Generate music from cellular automata</h3>
     <ControlsContainer />
     <GenerationCounterContainer />
     <BoardContainer />
