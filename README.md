@@ -9,15 +9,15 @@ The basic idea is to analyze the 2D plane of the cellular automaton as it evolve
 
 ### Interface
 
-Pause - Stop computing new generations
-Start - While paused, click to resume simulation
-Advance - While paused, you can advance 1 generation at a time
-Randomize - Erase the board and fill with new cells at 0.37 density
-Clear - Kill every cell on the board
+- Pause - Stop computing new generations
+- Start - While paused, click to resume simulation
+- Advance - While paused, you can advance 1 generation at a time
+- Randomize - Erase the board and fill with new cells at 0.37 density
+- Clear - Kill every cell on the board
 
 Whenever the simulation is running, the program will generate audio.
 
-There are many options that are only available by editing the source code:
+There are options that are only available by editing the source code:
 - Board size
 - Time interval between generations
 - Audio synthesizer configuration
@@ -65,9 +65,9 @@ For the synthesizers I tried a few different ideas and settled on the following:
 
 Also the musical scales for each voice are predefined, and the musical key changes randomly between defined possiblities every 192 generations.
 
-In other words there's a lot of artistic license in making the music sound good. The game of life simulation doesn't magically produce beautiful music without somebody making it do so.
+As you can see, there's a lot of artistic license in making the music sound decent. The game of life simulation doesn't magically produce beautiful music without somebody making it do so.
 
-I guess you could think of this implementation as like a guided music box - the music is influenced by the simulation, but not entirely defined by it.
+One could think of this implementation as like a guided music box - the music is influenced by the simulation, but not entirely defined by it.
 
 ### Further possibilities
 
