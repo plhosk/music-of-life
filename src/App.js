@@ -272,7 +272,7 @@ const UpdateSounds = ({ board, generation }) => {
 
   // Drum sound
   if (generation !== 0 && generation % 16 === 0) {
-    if (decayConst >= 0.1) {
+    if (decayConst >= 0.15) {
       drum1.newFrequency(currentScale[0], decayConst * 0.001)
     }
   }
