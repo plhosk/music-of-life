@@ -3,6 +3,8 @@ Paul Hoskinson (plhosk@gmail.com)
 
 Try it at [https://music-of-life.surge.sh](https://music-of-life.surge.sh). Warning, this app outputs sound.
 
+---
+
 This is a demo using the Web Audio API to generate sounds from a Game of Life cellular automaton.
 
 The basic idea is to analyze the 2D plane of the cellular automaton as it evolves and convert this information to commands to be sent to a sound synthesizer. 
