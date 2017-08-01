@@ -295,6 +295,10 @@ const GameOfLifeApp = () => (
     <GenerationCounterContainer />
     <UpdateSoundsContainer />
     <BoardContainer />
+    <div className="footer">
+      <br />
+      2017 Paul Hoskinson&nbsp;&nbsp;&nbsp;<a href="https://github.com/plhosk/music-of-life">GitHub</a>
+    </div>
   </div>
 )
 

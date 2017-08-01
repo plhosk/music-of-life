@@ -48,3 +48,11 @@ table {
   border-width: 2px;
   border-color: #888;
 }
+
+.footer {
+  font-size: 0.8em;
+}
+
+.footer a {
+  color: white;
+}
