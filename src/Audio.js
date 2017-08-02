@@ -49,7 +49,7 @@ for (let key = 0; key < 12; key += 1) {
 
 const context = new AudioContext()
 const overallVolume = context.createGain()
-overallVolume.gain.value = 0.5
+overallVolume.gain.value = 1
 const merger = context.createChannelMerger(1)
 merger.connect(overallVolume)
 overallVolume.connect(context.destination)

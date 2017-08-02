@@ -25,6 +25,7 @@ There are options that are only available by editing the source code:
 - Board size
 - Time interval between generations
 - Audio synthesizer configuration
+- Changing game rules to generate different cellular automata
 
 ### Development
 
@@ -67,11 +68,11 @@ For the synthesizers I tried a few different ideas and settled on the following:
   - Produces a click sound every 16 generations
   - Shuts off if the concentration of active cells drops below a certain value
 
-Also the musical scales for each voice are predefined, and the musical key changes randomly between defined possiblities every 192 generations.
+Also the duration of notes varies according to total cell activity, musical scales for each voice are predefined, and the musical key changes randomly between defined possiblities every 192 generations.
 
-As you can see, there's a lot of artistic license in making the music sound decent. The game of life simulation doesn't magically produce beautiful music without somebody making it do so.
+As you can see, there's a lot of artistic license involved in making the music sound anything like music. The game of life simulation doesn't magically produce beautiful music without somebody making it do so.
 
-One could think of this implementation as like a guided music box - the music is influenced by the simulation, but not entirely defined by it.
+One could think of this implementation as guided music box - the music is influenced by the simulation, but not entirely defined by it.
 
 ### Further possibilities
 
@@ -125,9 +126,7 @@ Voice controls:
 - Audio filter (phase, low pass, high pass, band pass) - filter parameters can be controlled
 - Rhythm (constant tone vs repeated notes vs intermittent, when to initiate note, when to stop)
 
-Possible control configurations: 
-
-Connect output generators on 1 side with synthesizers on other side
+Possible control configurations: Connect output generators on 1 side with synthesizers on other side
 
 **Output generators:**
 - any from above list. Need to distill the best signals
