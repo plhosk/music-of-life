@@ -220,7 +220,7 @@ const UpdateSounds = ({ board, generation }) => {
   decayConst = Math.sqrt(allActiveCount / (ROWS * COLS))
 
   // Change root key every so often
-  if (generation !== 0 && generation % 192 === 0) {
+  if (generation !== 0 && generation % 192 === 0 && decayConst > 0.15) {
     let offsetList = [0, 2, 4, 6, 8]
     semitoneOffset = offsetList[Math.floor(Math.random() * offsetList.length)]
     calculateScales(semitoneOffset)
